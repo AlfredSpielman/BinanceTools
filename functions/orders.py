@@ -2,32 +2,138 @@ import pandas as pd
 import numpy as np
 from datetime import date
 from parameters.params import Coins
-from functions.misc import folder_check, gogogo
+from functions.misc import folder_check, gogogo, Color
 
 pd.options.display.float_format = '{:.8f}'.format
 
 
-def order_tailor(start, end, steps, coins):
-    x = np.linspace(start, end, steps)
-    mean = np.mean(x)
-    sd = np.std(x)
-    prob_density = (np.pi * sd) * np.exp(-0.5 * ((x - mean) / sd) ** 2)
+def order_manager(client, portfolio, side, coin, pair, start, end, steps, part=None, amount=None, norm_dist=False,
+                  show=True):
+
+    if (part is not None) & (amount is not None):
+        print('Please provide only one: part OR amount.')
+        return
+
+    if (part is not None) & ((part <= 0) | (part > 100)):
+        print(f'Part cannot be {part}. Please provide value 1-100')
+        return
+
+    if side == 'SELL':
+        if part is None:
+            balance = portfolio[(portfolio['account'] == 'Spot') & (portfolio['asset'] == coin)]['total'].reset_index(
+                drop=True)[0]
+            if amount > balance:
+                print(f'Amount exceeds balance: {amount} > {balance}')
+                return
+        else:
+            amount = portfolio[(portfolio['account'] == 'Spot') & (portfolio['asset'] == coin)]['total'].reset_index(
+                drop=True)[0] * (part / 100)
+    elif side == 'BUY':
+        amount = portfolio[(portfolio['account'] == 'Spot') & (portfolio['asset'] == pair)]['free'].reset_index(
+            drop=True)[0]
+        if part is not None:
+            amount *= (part / 100)
+    else:
+        print(f'Wrong side: {side}\nShould be "BUY" or "SELL".')
+        return
+
+    orders = order_tailor(side, norm_dist, start, end, steps, coins=amount)
+    order_adjustment(client, orders, steps, norm_dist, start, end, amount, coin, pair, side, show)
+
+
+def order_tailor(side, norm_dist, start, end, steps, coins):
+    prices = np.linspace(start, end, steps)
+
+    if norm_dist:
+        mean = np.mean(prices)
+        sd = np.std(prices)
+        prob_density = (np.pi * sd) * np.exp(-0.5 * ((prices - mean) / sd) ** 2)
+    else:
+        prob_density = [coins/steps] * steps
+
     df = pd.DataFrame(prob_density, columns=['distribution'])
-    df = df.apply(lambda x: x / df['distribution'].sum())
-    df['price'] = x
-    df['coins'] = df['distribution'] * coins
+    df = df.apply(lambda x: x/df['distribution'].sum())
+    df['price'] = prices
 
-    return df
+    if side == 'SELL':
+        df['coins'] = df['distribution'] * coins
+        df['distribution'] = df['distribution'].apply(lambda x: str(round(x * 100, 1)))
+        df['total_val'] = df['price'] * df['coins']
+    else:
+        df['total_val'] = df['distribution'] * coins
+        df['distribution'] = df['distribution'].apply(lambda x: str(round(x * 100, 1)))
+        df['coins'] = df['total_val'] / df['price']
+
+    return df[['distribution', 'price', 'coins', 'total_val']]
 
 
-def set_price(cost, margin):
-    price = cost * (1 + margin)
-    return price
+def order_adjustment(client, orders, steps, norm_dist, start, end, amount, coin, pair, side, show):
+    if pair == 'USDT':
+        min_val = 10
+    elif pair == 'BTC':
+        min_val = 0.0001
+    else:
+        print(f'{Color.RED}Only USDT and BTC have minimum value of an order specified. Please edit code: '
+              f'def order_adjustment(){Color.END}')
+        return
+
+    if orders.total_val.min() < min_val:
+        original = steps
+        print(f'{"-"*69}\n'
+              f'{Color.CYAN}Minimum value of an order has to be {Color.RED}{min_val} {pair}{Color.CYAN}.{Color.END}')
+
+        min_notional = True
+        while min_notional:
+            steps -= 1
+            orders = order_tailor(side, norm_dist, start, end, steps, coins=amount)
+            if orders.total_val.min() >= min_val:
+                min_notional = False
+
+        if(input(f'{"-"*69}\n'
+                 f'{Color.CYAN}Number of steps have been reduced from '
+                 f'{Color.RED}{original}{Color.CYAN} to: {Color.RED}{steps}{Color.CYAN}\n'
+                 f'Do you want to proceed?\n'
+                 f'{Color.GREEN}Y/N{Color.END} ? --> ').upper()) == 'Y':
+            print_orders(orders, show)
+            if gogogo(coin, pair, side, amount, start, end, steps) == 'Y':
+                place_orders(client, orders, coin, pair, side)
+    else:
+        print_orders(orders, show)
+        if gogogo(coin, pair, side, amount, start, end, steps) == 'Y':
+            place_orders(client, orders, coin, pair, side)
 
 
-def get_cost(coin):
-    df = pd.read_excel('assets.xlsx')
-    return df[df['coin'] == coin]['cost'][0]
+def print_orders(orders, show):
+    if show:
+        print(f'{"-"*69}')
+        print(orders)
+
+
+def place_orders(client, orders, coin, pair, side):
+    last = len(orders) - 1
+    for i, r in orders.iterrows():
+        if i < last:
+            price = round(r.price, Coins[coin]['price'])
+            if side == 'SELL':
+                quantity = round(r.coins, Coins[coin]['lot'])
+            else:
+                quantity = round(r.coins/r.price, Coins[coin]['lot'])
+
+            post_order(client, coin=coin, pair=pair, quantity=quantity, price=price, side=side)
+        else:
+            free = round(float(client.get_asset_balance(asset=coin)['free']), Coins[coin]['lot'])
+            post_order(client, coin=coin, pair=pair, quantity=free, price=price, side=side)
+
+
+def post_order(client, coin, pair, quantity, price, side):
+    client.create_order(
+        symbol=coin + pair,
+        side=side,
+        type='LIMIT',
+        timeInForce='GTC',
+        quantity=quantity,
+        price=price)
+    print(f'LIMIT order: {side} {quantity} {coin} for {price} {pair}')
 
 
 def get_orders(client, portfolio, save):
@@ -63,7 +169,9 @@ def get_orders(client, portfolio, save):
 
             df_coin = df_coin.astype(order_types)
             df_coin['p%'] = Coins[coin]['provision']
-            df_coin['provision'] = df_coin['p%'] * df_coin['cummulativeQuoteQty']
+            df_coin['provision'] = np.where(df_coin.side == 'SELL',
+                                            df_coin['p%'] * df_coin['cummulativeQuoteQty'],
+                                            df_coin['p%'] * df_coin['executedQty'])
             del df_coin['p%']
             df = df.append(df_coin)
 
@@ -79,58 +187,3 @@ def get_orders(client, portfolio, save):
     df.reset_index(drop=True, inplace=True)
 
     return df
-
-
-def order_summary(df):
-    summary = pd.DataFrame(
-        df[df.status == 'FILLED'].groupby(['symbol', 'side'])['executedQty'].sum().reset_index()).pivot(
-        index='symbol', columns='side', values='executedQty')
-
-    return summary
-
-
-def post_order(client, coin, pair, quantity, price, side):
-    client.create_order(
-        symbol=coin + pair,
-        side=side,
-        type='LIMIT',
-        timeInForce='TIME_IN_FORCE_GTC',
-        quantity=quantity,
-        price=price)
-
-
-def place_orders(client, orders, coin, pair, side):
-    last = len(orders) - 1
-    for i, r in orders.iterrows():
-
-        price = round(r.price, Coins[coin]['price'])
-        if side == 'SELL':
-            quantity = round(r.coins, Coins[coin]['lot'])
-        else:
-            quantity = round(r.coins/r.price, Coins[coin]['lot'])
-
-        if last < i:
-            post_order(client, coin=coin, pair=pair, quantity=quantity, price=price, side=side)
-        else:
-            free = client.get_asset_balance(asset=coin)
-            post_order(client, coin=coin, pair=pair, quantity=free, price=price, side=side)
-
-
-def order_manager(client, portfolio, side, coin, pair, start_margin, end_margin, part, steps):
-    if side == 'SELL':
-        cost = get_cost(coin)
-        amount = portfolio[portfolio['asset'] == coin]['total'].reset_index(drop=True)[0]
-    elif side == 'BUY':
-        cost = float(client.get_ticker(symbol='BTCUSDT')['lastPrice'])
-        amount = portfolio[portfolio['asset'] == pair]['total'].reset_index(drop=True)[0]
-    else:
-        print(f'Wrong side: {side}\nShould be "BUY" or "SELL".')
-        return
-
-    start = set_price(cost, margin=start_margin)
-    end = set_price(cost, margin=end_margin)
-    amount *= part
-
-    orders = order_tailor(start=start, end=end, steps=steps, coins=amount)
-    if gogogo(coin, pair, side, amount, start, start_margin, end, end_margin) == 'Y':
-        place_orders(client, orders, coin, pair, side)

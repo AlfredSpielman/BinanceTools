@@ -2,35 +2,43 @@ from parameters.params import Coins
 import os
 
 
-def gogogo(coin, pair, side, amount, start, start_margin, end, end_margin):
-    amount = round(amount, Coins[coin]['lot'])
-    start = round(start, Coins[coin]['price'])
-    end = round(end, Coins[coin]['price'])
-    start_margin = round(start_margin * 100, 2)
-    end_margin = round(end_margin * 100, 2)
+class Color:
+    CYAN = '\033[96m'
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    BOLD = '\033[1m'
+    END = '\033[0m'
 
-    class Color:
-        CYAN = '\033[96m'
-        GREEN = '\033[92m'
-        RED = '\033[91m'
-        BOLD = '\033[1m'
-        END = '\033[0m'
+
+def gogogo(coin, pair, side, amount, start, end, steps):
+    amount = round(amount, Coins[coin]['lot'])
+
+    if start > 0.001:
+        start_str = round(start, Coins[coin]['price'])
+        end_str = round(end, Coins[coin]['price'])
+        average = round((start + end) / 2, Coins[coin]['price'])
+    else:
+        start_str = str(int(round(start * 100000000, 0))) + ' satoshi'
+        end_str = str(int(round(end * 100000000, 0))) + ' satoshi'
+        average = str(int(round(((start + end) / 2) * 100000000, 0))) + ' satoshi'
 
     if side == 'SELL':
-        question = input(f'{Color.CYAN}Do you want to open {Color.RED}{side}{Color.CYAN}'
+        question = input(f'{"-"*100}\n'
+                         f'{Color.CYAN}Do you want to open {Color.RED}{steps} {side}{Color.CYAN}'
                          f' orders of {Color.RED}{amount}{Color.CYAN} {Color.RED}{coin}{Color.CYAN}'
                          f' for {Color.RED}{pair}{Color.CYAN}\n'
-                         f'starting at : {Color.GREEN}{start} ({start_margin}%){Color.CYAN}\n'
-                         f'ending at   : {Color.GREEN}{end} ({end_margin}%){Color.CYAN}\n'
-                         f'average     : {Color.GREEN}{(start+end)/2}\n'
+                         f'starting at : {Color.GREEN}{start_str}{Color.CYAN}\n'
+                         f'ending at   : {Color.GREEN}{end_str}{Color.CYAN}\n'
+                         f'average     : {Color.GREEN}{average}\n'
                          f'{Color.BOLD}Y/N{Color.END} ? --> ')
     else:
-        question = input(f'{Color.CYAN}Do you want to open {Color.RED}{side}{Color.CYAN}'
+        question = input(f'{"-"*50}\n'
+                         f'{Color.CYAN}Do you want to open {Color.RED}{steps} {side}{Color.CYAN}'
                          f' orders of {Color.RED}{coin}{Color.CYAN}'
                          f' for {Color.RED}{amount} {pair}{Color.CYAN}\n'
-                         f'starting at : {Color.GREEN}{start} ({start_margin}%){Color.CYAN}\n'
-                         f'ending at   : {Color.GREEN}{end} ({end_margin}%){Color.CYAN}\n'
-                         f'average     : {Color.GREEN}{(start+end)/2}\n'
+                         f'starting at : {Color.GREEN}{start_str}{Color.CYAN}\n'
+                         f'ending at   : {Color.GREEN}{end_str}{Color.CYAN}\n'
+                         f'average     : {Color.GREEN}{average}\n'
                          f'{Color.BOLD}Y/N{Color.END} ? --> ')
 
     question = question.upper()
@@ -41,3 +49,20 @@ def gogogo(coin, pair, side, amount, start, start_margin, end, end_margin):
 def folder_check(folder):
     if folder not in os.listdir():
         os.mkdir(folder)
+
+
+def check_params(coin, pair):
+    result = True
+    try:
+        Coins[coin]
+    except KeyError:
+        print(f'{Color.RED}Missing coin {coin} in params.Coins{Color.END}')
+        result = False
+
+    try:
+        Coins[pair]
+    except KeyError:
+        print(f'{Color.RED}Missing coin {pair} in params.Coins{Color.END}')
+        result = False
+
+    return result

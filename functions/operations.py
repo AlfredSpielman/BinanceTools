@@ -5,9 +5,9 @@ import numpy as np
 pd.options.display.float_format = '{:.8f}'.format
 
 
-def operations(depostits, orders):  # deposits, orders
+def operations(deposits, orders):  # deposits, orders
     df1 = pd.DataFrame()
-    df1[['timeStamp', 'amount', 'asset']] = depostits[['insertTime', 'amount', 'asset']].copy()
+    df1[['timeStamp', 'amount', 'asset']] = deposits[['insertTime', 'amount', 'asset']].copy()
 
     df2 = pd.DataFrame()
     cols = ['updateTime', 'symbol', 'side', 'price', 'executedQty', 'cummulativeQuoteQty', 'provision']
@@ -38,12 +38,12 @@ def givers_takers(df):
             giver.append(row.right)
             giver_qty.append(-row.cummulativeQuoteQty)
             taker.append(row.left)
-            taker_qty.append(row.executedQty)
+            taker_qty.append(row.executedQty - row.provision)
         elif row.side == 'SELL':
             giver.append(row.left)
             giver_qty.append(-row.executedQty)
             taker.append(row.right)
-            taker_qty.append(row.cummulativeQuoteQty)
+            taker_qty.append(row.cummulativeQuoteQty - row.provision)
         else:
             giver.append(np.NaN)
             giver_qty.append(np.NaN)

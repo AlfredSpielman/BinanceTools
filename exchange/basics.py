@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from binance.client import Client
 from parameters import keys
+from parameters.params import Coins
 
 
 pd.options.display.float_format = '{:.8f}'.format
@@ -32,15 +33,15 @@ def portfolio(client):
 def calculate_btc_val(client, portfolio):
     prices = []
 
-    for coin in portfolio['asset']:
+    for i, coin in enumerate(portfolio['asset']):
         if (coin[:3] == 'USD') | (coin[-3:] == 'USD'):
             price = float(client.get_ticker(symbol='BTC' + coin)['lastPrice'])
-            price = portfolio[portfolio['asset'] == coin]['total'].values[0].astype(float) / price
+            price = portfolio.iloc[i]['total'].astype(float) / price
         elif coin != 'BTC':
             price = float(client.get_ticker(symbol=coin + 'BTC')['lastPrice'])
-            price *= portfolio[portfolio['asset'] == coin]['total'].values[0].astype(float)
+            price *= portfolio.iloc[i]['total'].astype(float)
         else:   # case if coin == 'BTC'
-            price = portfolio[portfolio['asset'] == coin[-3:]]['total'].values[0].astype(float)
+            price = portfolio.iloc[i]['total'].astype(float)
         prices.append(price)
 
     portfolio['BTC'] = [x.round(8) for x in prices]
