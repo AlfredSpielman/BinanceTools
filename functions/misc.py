@@ -23,7 +23,7 @@ def gogogo(coin, pair, side, amount, start, end, steps):
         average = str(int(round(((start + end) / 2) * 100000000, 0))) + ' satoshi'
 
     if side == 'SELL':
-        question = input(f'{"-"*100}\n'
+        question = input(f'{"-"*69}\n'
                          f'{Color.CYAN}Do you want to open {Color.RED}{steps} {side}{Color.CYAN}'
                          f' orders of {Color.RED}{amount}{Color.CYAN} {Color.RED}{coin}{Color.CYAN}'
                          f' for {Color.RED}{pair}{Color.CYAN}\n'
@@ -32,7 +32,7 @@ def gogogo(coin, pair, side, amount, start, end, steps):
                          f'average     : {Color.GREEN}{average}\n'
                          f'{Color.BOLD}Y/N{Color.END} ? --> ')
     else:
-        question = input(f'{"-"*50}\n'
+        question = input(f'{"-"*69}\n'
                          f'{Color.CYAN}Do you want to open {Color.RED}{steps} {side}{Color.CYAN}'
                          f' orders of {Color.RED}{coin}{Color.CYAN}'
                          f' for {Color.RED}{amount} {pair}{Color.CYAN}\n'
@@ -52,17 +52,17 @@ def folder_check(folder):
 
 
 def check_params(coin, pair):
-    result = True
+    run = True
     try:
         Coins[coin]
     except KeyError:
         print(f'{Color.RED}Missing coin {coin} in params.Coins{Color.END}')
-        result = False
+        run = False
 
     try:
         Coins[pair]
     except KeyError:
         print(f'{Color.RED}Missing coin {pair} in params.Coins{Color.END}')
-        result = False
+        run = False
 
-    return result
+    return run

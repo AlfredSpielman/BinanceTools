@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 from binance.client import Client
 from parameters import keys
-from parameters.params import Coins
 
 
 pd.options.display.float_format = '{:.8f}'.format

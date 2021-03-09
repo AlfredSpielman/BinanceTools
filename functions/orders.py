@@ -76,12 +76,12 @@ def order_tailor(coin, side, norm_dist, start, end, steps, coins):
 
 
 def order_adjustment(client, orders, steps, norm_dist, start, end, amount, coin, pair, side, part, show):
-    if pair == 'USDT':
+    if pair[:3] == 'USD':
         min_val = 10
     elif pair == 'BTC':
         min_val = 0.0001
     else:
-        print(f'{Color.RED}Only USDT and BTC have minimum value of an order specified. Please edit code: '
+        print(f'{Color.RED}Only USD* and BTC have minimum value of an order specified. Please edit code: '
               f'def order_adjustment(){Color.END}')
         return
 
@@ -90,6 +90,7 @@ def order_adjustment(client, orders, steps, norm_dist, start, end, amount, coin,
         print(f'{"-"*69}\n'
               f'{Color.CYAN}Minimum value of an order has to be {Color.RED}{min_val} {pair}{Color.CYAN}.{Color.END}')
 
+        # decreasing number of steps
         min_notional = True
         while min_notional:
             steps -= 1
@@ -97,19 +98,23 @@ def order_adjustment(client, orders, steps, norm_dist, start, end, amount, coin,
             if orders.total_val.min() >= min_val:
                 min_notional = False
 
+        # place orders with decreased number of steps
         if(input(f'{"-"*69}\n'
                  f'{Color.CYAN}Number of steps have been reduced from '
                  f'{Color.RED}{original}{Color.CYAN} to: {Color.RED}{steps}{Color.CYAN}\n'
-                 f'Do you want to proceed?\n'
+                 f'Do you want to proceed with the new split (Y) or keep original one (N)?\n'
                  f'{Color.GREEN}Y/N{Color.END} ? --> ').upper()) == 'Y':
             print_orders(orders, show)
             if gogogo(coin, pair, side, amount, start, end, steps) == 'Y':
                 place_orders(client, orders, coin, pair, side, part)
+        else:
+            print(f'{Color.RED}Error min_notional: At least 1 order is below min_val = {min_val}.')
     else:
         original = steps
         print(f'{"-" * 69}\n'
               f'{Color.CYAN}Minimum value of an order has to be {Color.RED}{min_val} {pair}{Color.CYAN}.{Color.END}')
 
+        # increasing number of steps
         min_notional = True
         while min_notional:
             steps += 1
@@ -119,15 +124,17 @@ def order_adjustment(client, orders, steps, norm_dist, start, end, amount, coin,
                 orders = order_tailor(coin, side, norm_dist, start, end, steps, coins=amount)
                 min_notional = False
 
+        # place orders with increased number of steps
         if (input(f'{"-" * 69}\n'
-                  f'{Color.CYAN}Number of steps have been increased from '
+                  f'{Color.CYAN}Number of steps can been increased from '
                   f'{Color.RED}{original}{Color.CYAN} to: {Color.RED}{steps}{Color.CYAN}\n'
-                  f'Do you want to proceed?\n'
+                  f'Do you want to proceed with the new split (Y) or keep original one (N)?\n'
                   f'{Color.GREEN}Y/N{Color.END} ? --> ').upper()) == 'Y':
             print_orders(orders, show)
             if gogogo(coin, pair, side, amount, start, end, steps) == 'Y':
                 place_orders(client, orders, coin, pair, side, part)
         else:
+            # place orders with original number of steps
             orders = order_tailor(coin, side, norm_dist, start, end, original, coins=amount)
             print_orders(orders, show)
             if gogogo(coin, pair, side, amount, start, end, original) == 'Y':

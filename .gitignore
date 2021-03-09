@@ -8,6 +8,6 @@ gen
 /orders/
 /market_data/
 /__pycache__/
-parameters/keys.py
 assets.xlsx
 *.pyc
+!/parameters/keys.py
