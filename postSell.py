@@ -1,4 +1,5 @@
 from exchange.basics import connect, portfolio
+from functions.misc import check_params
 from functions.orders import order_manager
 from functions.misc import check_params
 
