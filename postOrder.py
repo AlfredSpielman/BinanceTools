@@ -21,12 +21,6 @@ if __name__ == '__main__':
     # True = normal distribution, False = linear distribution, [default: False]
     norm_dist = False
 
-    # Do you want to print all orders? [bool, default: True]
-    show = True
-
     run = check_params(coin, pair)
-
     if run:
-        order_manager(client, portfolio,
-                      side, coin, pair, start, end, steps, part, amount,
-                      norm_dist, show)
+        order_manager(client, portfolio, side, coin, pair, start, end, steps, part, amount, norm_dist)
