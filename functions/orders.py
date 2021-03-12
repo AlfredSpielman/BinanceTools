@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import time
 from datetime import date
 from parameters.params import Coins
 from functions.misc import folder_check, gogogo, Color
@@ -41,12 +42,14 @@ def order_manager(client, portfolio, side, coin, pair, start, end, steps, part=N
         print(f'Wrong side: {side}\nShould be "BUY" or "SELL".')
         return
 
-    orders = order_tailor(coin, side, norm_dist, start, end, steps, coins=amount)
+    orders = order_tailor(coin, side, part, norm_dist, start, end, steps, coins=amount)
     order_adjustment(client, orders, steps, norm_dist, start, end, amount, coin, pair, side, part, show)
 
 
-def order_tailor(coin, side, norm_dist, start, end, steps, coins):
+def order_tailor(coin, side, part, norm_dist, start, end, steps, coins):
     prices = np.linspace(start, end, steps)
+    if part == 100:
+        steps -= steps
 
     if norm_dist:
         mean = np.mean(prices)
@@ -97,7 +100,7 @@ def order_adjustment(client, orders, steps, norm_dist, start, end, amount, coin,
         pass
     elif q == 3:
         end = five_x
-        orders = order_tailor(coin, side, norm_dist, start, end, steps, coins=amount)
+        orders = order_tailor(coin, side, part, norm_dist, start, end, steps, coins=amount)
 
     if five_x_check:
         if orders.total_val.min() < min_val:
@@ -109,7 +112,7 @@ def order_adjustment(client, orders, steps, norm_dist, start, end, amount, coin,
             min_notional = True
             while min_notional:
                 steps -= 1
-                orders = order_tailor(coin, side, norm_dist, start, end, steps, coins=amount)
+                orders = order_tailor(coin, side, part, norm_dist, start, end, steps, coins=amount)
                 if orders.total_val.min() >= min_val:
                     min_notional = False
 
@@ -133,10 +136,10 @@ def order_adjustment(client, orders, steps, norm_dist, start, end, amount, coin,
             min_notional = True
             while min_notional:
                 steps += 1
-                orders = order_tailor(coin, side, norm_dist, start, end, steps, coins=amount)
+                orders = order_tailor(coin, side, part, norm_dist, start, end, steps, coins=amount)
                 if orders.total_val.min() < min_val:
                     steps -= 1
-                    orders = order_tailor(coin, side, norm_dist, start, end, steps, coins=amount)
+                    orders = order_tailor(coin, side, part, norm_dist, start, end, steps, coins=amount)
                     min_notional = False
 
             # place orders with increased number of steps
@@ -150,7 +153,7 @@ def order_adjustment(client, orders, steps, norm_dist, start, end, amount, coin,
                     place_orders(client, orders, coin, pair, side, part)
             else:
                 # place orders with original number of steps
-                orders = order_tailor(coin, side, norm_dist, start, end, original, coins=amount)
+                orders = order_tailor(coin, side, part, norm_dist, start, end, original, coins=amount)
                 print_orders(orders, show)
                 if gogogo(coin, pair, side, amount, start, end, original) == 'Y':
                     place_orders(client, orders, coin, pair, side, part)
@@ -165,6 +168,9 @@ def print_orders(orders, show):
 def place_orders(client, orders, coin, pair, side, part):
     last = len(orders) - 1
 
+    if side == 'BUY':
+        orders = orders.iloc[::-1].reset_index(drop=True)
+
     for i, r in orders.iterrows():
         if part is not None:
             if (i == last) & (part == 100):
@@ -174,6 +180,7 @@ def place_orders(client, orders, coin, pair, side, part):
         else:
             quantity = r.coins
 
+        time.sleep(0.1)
         post_order(client, coin=coin, pair=pair, quantity=quantity, price=r.price, side=side)
 
 
@@ -185,7 +192,8 @@ def post_order(client, coin, pair, quantity, price, side):
         timeInForce='GTC',
         quantity=quantity,
         price=price)
-    print(f'LIMIT order: {side} {quantity} {coin} for {price} {pair}')
+    total = round(quantity*price, Coins[coin]['price'])
+    print(f'LIMIT order: {side} {quantity} {coin} at {price} {pair}, total {total} {pair}')
 
 
 def get_orders(client, portfolio, save):

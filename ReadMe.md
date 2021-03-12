@@ -1,5 +1,5 @@
 # BinanceTools
-###### version 1.1.0
+###### version 1.2.0
 
 This Python code is used to automize some tedious tasks around opening multiple limit orders in Binance Crypto Exchange.
 
@@ -57,6 +57,10 @@ if __name__ == '__main__':
         order_manager(client, portfolio, side, coin, pair, start, end, steps, part, amount, norm_dist)
 ```
 
+#### order of posting orders
+- If you choose to set **BUY**, program will post orders by price **descending**
+- If you choose to set **SELL**, program will post orders by price **ascending**
+ 
 #### check_params
 If you execute `run = check_params('ABC', 'XYZ')`, you'll get result:
 ```
@@ -121,7 +125,7 @@ sum                650.00           650.00
 std_dev             16.56             0.00
 ```
 
-#### 5x limitations
+#### 5x limit
 Binance isn't letting for orders with price 5 and above times higher then the current price. To handle issues when user
 sets `end` value above that limit, function `check_current_price` has been introduced to check and decide on the next
 steps. It reads the current price of paired coin and if `end` is above 5x limit, user has to decide, what to do next:
@@ -131,6 +135,15 @@ to cover only orders within 5x limitation. Orders above 5x will be ignored.
 - _(3) - apply 5x as new end for 100% of amount_ - the amount of traded coins will remain the same, but price range
 will be updated to fit within 5x limitation
 
+## Limitations
+Based on API Trading Rules (see: [What kind of limits are there?](https://www.binance.com/en/support/articles/360004492232))
+you can be banned from 5 minutes to 3 days if you spam order creation and cancellation very quickly without executing trades.
+This program allows you to open hundreds of orders very quickly. Please use trial and error to achieve your ideal
+trading pattern and **do not play with opening tones of orders just to close them right after!**
+
+_Error -1015 TOO_MANY_ORDERS_ : API has Hard-Limit of 100 orders per 10 seconds. To keep within this limit, order
+creation has been artificially slowed down to 10 orders/second.
+
 ## Common issues:
 `binance.exceptions.BinanceAPIException: APIError(code=-1021): Timestamp for this request was 1000ms ahead of the server's time.`
 
@@ -138,8 +151,5 @@ This is know issue ([link](https://github.com/sammchardy/python-binance/issues/2
 The only solution for that is restarting your PC and running code again.
 
 ## TO DO:
-1. error: due to differences between Python and Binance way of rounding total order value, when trading 100% of asset on max number of steps,
-sometimes the last order has insufficient amount of asset (like missing only 0.2 USDT to reach 10 USDT min_val).
-`binance.exceptions.BinanceAPIException: APIError(code=-2010): Account has insufficient balance for requested action.`
-2. add automatic precision checker
-3. work on nice GUI
+1. add automatic precision checker
+2. work on nice GUI

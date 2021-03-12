@@ -11,7 +11,8 @@ Coins = {
     'LTC': {'lot': 5, 'price': 2},
     'XRP': {'lot': 1, 'price': 5},
     'USDT': {'lot': 1, 'price': 2},
-    'UNI': {'lot': 2, 'price': 4}
+    'UNI': {'lot': 2, 'price': 4},
+    'ETH': {'lot': 5, 'price': 2}
 }
 
 Pairs = {
