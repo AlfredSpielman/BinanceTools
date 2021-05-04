@@ -12,7 +12,20 @@ Coins = {
     'XRP': {'lot': 1, 'price': 5},
     'USDT': {'lot': 1, 'price': 2},
     'UNI': {'lot': 2, 'price': 4},
-    'ETH': {'lot': 5, 'price': 2}
+    'ETH': {'lot': 5, 'price': 2},
+    'BNB': {'lot': 3, 'price': 4},
+    'LINK': {'lot': 2, 'price': 4},
+    'ATOM': {'lot': 3, 'price': 3},
+    'SXP': {'lot': 3, 'price': 3},
+    'DREP': {'lot': 0, 'price': 6},
+    'ONE': {'lot': 1, 'price': 5},
+    'ALGO': {'lot': 2, 'price': 4},
+    'HBAR': {'lot': 1, 'price': 5},
+    'STMX': {'lot': 0, 'price': 6},
+    'REN': {'lot': 1, 'price': 5},
+    '1INCH': {'lot': 1, 'price': 8},
+    'EUR': {'lot': 2, 'price': 4},
+    'RSR': {'lot': 1, 'price': 5}
 }
 
 Pairs = {

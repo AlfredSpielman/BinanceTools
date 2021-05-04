@@ -10,23 +10,24 @@ class Color:
     END = '\033[0m'
 
 
-def gogogo(coin, pair, side, amount, start, end, steps):
+def gogogo(coin, pair, side, amount, start, end, steps, orders):
     amount = round(amount, Coins[coin]['lot'])
+    total = orders.total_val.sum()
 
     if start > 0.001:
         start_str = round(start, Coins[coin]['price'])
         end_str = round(end, Coins[coin]['price'])
         average = round((start + end) / 2, Coins[coin]['price'])
     else:
-        start_str = str(int(round(start * 100000000, 0))) + ' satoshi'
-        end_str = str(int(round(end * 100000000, 0))) + ' satoshi'
-        average = str(int(round(((start + end) / 2) * 100000000, 0))) + ' satoshi'
+        start_str = str(int(round(start * 100000000, 0))) + ' sat'
+        end_str = str(int(round(end * 100000000, 0))) + ' sat'
+        average = str(int(round(((start + end) / 2) * 100000000, 0))) + ' sat'
 
     if side == 'SELL':
         question = input(f'{"-"*69}\n'
                          f'{Color.CYAN}Do you want to open {Color.RED}{steps} {side}{Color.CYAN}'
                          f' orders of {Color.RED}{amount}{Color.CYAN} {Color.RED}{coin}{Color.CYAN}'
-                         f' for {Color.RED}{pair}{Color.CYAN}\n'
+                         f' for {Color.RED}{total} {pair}{Color.CYAN}\n'
                          f'starting at : {Color.GREEN}{start_str}{Color.CYAN}\n'
                          f'ending at   : {Color.GREEN}{end_str}{Color.CYAN}\n'
                          f'average     : {Color.GREEN}{average}\n'
@@ -34,7 +35,7 @@ def gogogo(coin, pair, side, amount, start, end, steps):
     else:
         question = input(f'{"-"*69}\n'
                          f'{Color.CYAN}Do you want to open {Color.RED}{steps} {side}{Color.CYAN}'
-                         f' orders of {Color.RED}{coin}{Color.CYAN}'
+                         f' orders of {Color.RED}{total} {coin}{Color.CYAN}'
                          f' for {Color.RED}{amount} {pair}{Color.CYAN}\n'
                          f'starting at : {Color.GREEN}{start_str}{Color.CYAN}\n'
                          f'ending at   : {Color.GREEN}{end_str}{Color.CYAN}\n'

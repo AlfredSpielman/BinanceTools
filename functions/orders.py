@@ -47,9 +47,11 @@ def order_manager(client, portfolio, side, coin, pair, start, end, steps, part=N
 
 
 def order_tailor(coin, side, part, norm_dist, start, end, steps, coins):
-    prices = np.linspace(start, end, steps)
+
     if part == 100:
-        steps -= steps
+        steps -= 1
+
+    prices = np.linspace(start, end, steps)
 
     if norm_dist:
         mean = np.mean(prices)
@@ -123,7 +125,7 @@ def order_adjustment(client, orders, steps, norm_dist, start, end, amount, coin,
                      f'Do you want to proceed with the new split (Y) or keep original one (N)?\n'
                      f'{Color.GREEN}Y/N{Color.END} ? --> ').upper()) == 'Y':
                 print_orders(orders, show)
-                if gogogo(coin, pair, side, amount, start, end, steps) == 'Y':
+                if gogogo(coin, pair, side, amount, start, end, steps, orders) == 'Y':
                     place_orders(client, orders, coin, pair, side, part)
             else:
                 print(f'{Color.RED}Error min_notional: At least 1 order is below min_val = {min_val}.')
@@ -149,13 +151,13 @@ def order_adjustment(client, orders, steps, norm_dist, start, end, amount, coin,
                       f'Do you want to proceed with the new split (Y) or keep original one (N)?\n'
                       f'{Color.GREEN}Y/N{Color.END} ? --> ').upper()) == 'Y':
                 print_orders(orders, show)
-                if gogogo(coin, pair, side, amount, start, end, steps) == 'Y':
+                if gogogo(coin, pair, side, amount, start, end, steps, orders) == 'Y':
                     place_orders(client, orders, coin, pair, side, part)
             else:
                 # place orders with original number of steps
                 orders = order_tailor(coin, side, part, norm_dist, start, end, original, coins=amount)
                 print_orders(orders, show)
-                if gogogo(coin, pair, side, amount, start, end, original) == 'Y':
+                if gogogo(coin, pair, side, amount, start, end, original, orders) == 'Y':
                     place_orders(client, orders, coin, pair, side, part)
 
 
@@ -174,6 +176,7 @@ def place_orders(client, orders, coin, pair, side, part):
     for i, r in orders.iterrows():
         if part is not None:
             if (i == last) & (part == 100):
+                # TODO APIError(code=-2010): Account has insufficient balance for requested action.
                 quantity = round(float(client.get_asset_balance(asset=coin)['free']), Coins[coin]['lot'])
             else:
                 quantity = r.coins
@@ -181,10 +184,10 @@ def place_orders(client, orders, coin, pair, side, part):
             quantity = r.coins
 
         time.sleep(0.1)
-        post_order(client, coin=coin, pair=pair, quantity=quantity, price=r.price, side=side)
+        post_order(client, i, last, coin=coin, pair=pair, quantity=quantity, price=r.price, side=side)
 
 
-def post_order(client, coin, pair, quantity, price, side):
+def post_order(client, i, last, coin, pair, quantity, price, side):
     client.create_order(
         symbol=coin + pair,
         side=side,
@@ -193,7 +196,10 @@ def post_order(client, coin, pair, quantity, price, side):
         quantity=quantity,
         price=price)
     total = round(quantity*price, Coins[coin]['price'])
-    print(f'LIMIT order: {side} {quantity} {coin} at {price} {pair}, total {total} {pair}')
+
+    i = (len(str(last)) - len(str(i))) * '0' + str(i)
+
+    print(f'{i}/{last} | LIMIT order: {side} {quantity} {coin} at {price} {pair}, total {total} {pair}')
 
 
 def get_orders(client, portfolio, save):
